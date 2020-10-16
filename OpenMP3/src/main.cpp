@@ -9,10 +9,39 @@ double func(double x)
   return sin(x);
 }
 
+#define MAX_NUM 100000
+
+double trapezoid(double x0, double x1, double dx) {
+  return dx * (func(x0) + func(x1)) * 0.5;
+}
+
 double calc(double x0, double x1, double dx, uint32_t num_threads)
 {
-  return 0;
+  int num_of_dots = (x1 - x0) / dx + 1;
+  double* dots = (double*)malloc(MAX_NUM * sizeof(double));
+  double res = 0.0;
+  for (int j = 0; j < num_of_dots; j += MAX_NUM - 1) {
+    #pragma omp parallel num_threads(num_threads) 
+    {
+      #pragma omp for 
+      for (int i = 0; i < MAX_NUM; i++) {
+        if (i + j < num_of_dots) {
+          dots[i] = x0 + (i + j) * dx;
+        } else {
+          dots[i] = 0.0;
+        }
+      }
+      #pragma omp for reduction(+:res) 
+      for (int i = 0; i < MAX_NUM - 1; i++) { 
+        res += trapezoid(dots[i], dots[i+1], dx);
+      }
+    }
+  }
+  free(dots);
+  return res;
 }
+
+
 
 int main(int argc, char** argv)
 {
